@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polymarket Trading Terminal</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 Polymarket Trading Terminal</h1>
+            <div class="status-badge" id="connectionStatus">Connected</div>
+        </header>
+
+        <!-- Strategy Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="maker">Maker MM</button>
+            <button class="tab-btn" data-tab="copy">Copy Trader</button>
+            <button class="tab-btn" data-tab="sniper">Orderbook Sniper</button>
+            <button class="tab-btn" data-tab="logs">Logs</button>
+        </div>
+
+        <!-- Maker MM Configuration -->
+        <div id="maker" class="tab-content active">
+            <div class="card">
+                <h2>Maker Rebate Market Maker</h2>
+                <div class="strategy-status">
+                    <span>Status: </span>
+                    <span id="makerStatus" class="status stopped">Stopped</span>
+                </div>
+                
+                <form id="makerConfig">
+                    <div class="form-group">
+                        <label>Assets</label>
+                        <select name="assets" multiple>
+                            <option value="btc">BTC</option>
+                            <option value="eth">ETH</option>
+                            <option value="sol">SOL</option>
+                            <option value="xrp">XRP</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Duration</label>
+                        <select name="duration">
+                            <option value="15m">15 Minutes</option>
+                            <option value="1h">1 Hour</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Trade Size (shares per side)</label>
+                        <input type="number" name="tradeSize" value="5" step="1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Max Combined Bid (0-1)</label>
+                        <input type="number" name="maxCombined" value="0.98" step="0.01" min="0" max="1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Re-entry Delay (seconds)</label>
+                        <input type="number" name="reentryDelay" value="30" step="5">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Current Market Enabled</label>
+                        <input type="checkbox" name="currentMarketEnabled" checked>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Max Odds Threshold</label>
+                        <input type="number" name="maxOdds" value="0.70" step="0.05" min="0" max="1">
+                    </div>
+                    
+                    <div class="button-group">
+                        <button type="submit" class="btn btn-primary">Save Config</button>
+                        <button type="button" id="startMaker" class="btn btn-success">Start Strategy</button>
+                        <button type="button" id="stopMaker" class="btn btn-danger">Stop Strategy</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Copy Trader Configuration -->
+        <div id="copy" class="tab-content">
+            <div class="card">
+                <h2>Copy Trader</h2>
+                <div class="strategy-status">
+                    <span>Status: </span>
+                    <span id="copyStatus" class="status stopped">Stopped</span>
+                </div>
+                
+                <form id="copyConfig">
+                    <div class="form-group">
+                        <label>Target Wallet Address</label>
+                        <input type="text" name="traderAddress" placeholder="0x..." required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Size Mode</label>
+                        <select name="sizeMode">
+                            <option value="balance">Balance Based</option>
+                            <option value="percentage">Percentage Based</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Size Percentage (%)</label>
+                        <input type="number" name="sizePercent" value="10" step="1" min="1" max="100">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Max Position Size (USDC)</label>
+                        <input type="number" name="maxPositionSize" value="100" step="10">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Auto-sell on Exit</label>
+                        <input type="checkbox" name="autoSell" checked>
+                    </div>
+                    
+                    <div class="button-group">
+                        <button type="submit" class="btn btn-primary">Save Config</button>
+                        <button type="button" id="startCopy" class="btn btn-success">Start Strategy</button>
+                        <button type="button" id="stopCopy" class="btn btn-danger">Stop Strategy</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sniper Configuration -->
+        <div id="sniper" class="tab-content">
+            <div class="card">
+                <h2>Orderbook Sniper</h2>
+                <div class="strategy-status">
+                    <span>Status: </span>
+                    <span id="sniperStatus" class="status stopped">Stopped</span>
+                </div>
+                
+                <form id="sniperConfig">
+                    <div class="form-group">
+                        <label>Target Assets</label>
+                        <select name="assets" multiple>
+                            <option value="eth">ETH</option>
+                            <option value="sol">SOL</option>
+                            <option value="xrp">XRP</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Max Shares per Order</label>
+                        <input type="number" name="maxShares" value="15" step="5">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Price Tiers (cents)</label>
+                        <div class="tiers">
+                            <input type="number" name="tier1" value="1" step="1" placeholder="Tier 1">
+                            <input type="number" name="tier2" value="2" step="1" placeholder="Tier 2">
+                            <input type="number" name="tier3" value="3" step="1" placeholder="Tier 3">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Weighted Sizing (%)</label>
+                        <div class="weights">
+                            <input type="number" name="weight1" value="50" step="5" placeholder="Weight 1">
+                            <input type="number" name="weight2" value="30" step="5" placeholder="Weight 2">
+                            <input type="number" name="weight3" value="20" step="5" placeholder="Weight 3">
+                        </div>
+                    </div>
+                    
+                    <div class="button-group">
+                        <button type="submit" class="btn btn-primary">Save Config</button>
+                        <button type="button" id="startSniper" class="btn btn-success">Start Strategy</button>
+                        <button type="button" id="stopSniper" class="btn btn-danger">Stop Strategy</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Logs Panel -->
+        <div id="logs" class="tab-content">
+            <div class="card">
+                <h2>Live Trading Logs</h2>
+                <div class="log-controls">
+                    <button id="clearLogs" class="btn btn-small">Clear</button>
+                    <button id="exportLogs" class="btn btn-small">Export</button>
+                </div>
+                <div id="logContainer" class="log-container">
+                    <div class="log-entry info">System ready. Configure and start strategies above.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Dashboard -->
+        <div class="dashboard">
+            <div class="card">
+                <h3>Performance Metrics</h3>
+                <div class="metrics">
+                    <div class="metric">
+                        <span class="metric-label">Total P&L:</span>
+                        <span id="totalPnL" class="metric-value">$0.00</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Total Trades:</span>
+                        <span id="totalTrades" class="metric-value">0</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Win Rate:</span>
+                        <span id="winRate" class="metric-value">0%</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Active Positions:</span>
+                        <span id="activePositions" class="metric-value">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script src="/js/config.js"></script>
+</body>
+</html>
